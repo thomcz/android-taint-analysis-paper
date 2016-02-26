@@ -1,0 +1,93 @@
+\documentclass[runningheads]{llncs}
+
+%---- Codierung----%
+\usepackage[utf8]{inputenc}
+%\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{llncsdoc}
+%----- Mathematischer Zeichenvorrat---%
+%\usepackage{amsmath}
+%\usepackage{amssymb}
+%\usepackage{enumerate}
+\usepackage{proof}
+\usepackage{mathpartir}
+% fuer die aktuelle Zeit 
+\usepackage{scrtime}
+\usepackage{listings}
+\usepackage{subfigure}
+\usepackage{hyperref}
+
+%referenzieren von Abbildungen
+\usepackage[figure]{hypcap}
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+% Syntax highlighting von Java Code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=8mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\begin{document}
+
+\mainmatter
+\title{Taint Analyse für Android Apps}
+\titlerunning{Taint Analyse für Android Apps}
+\author{Thomas Czogalik}
+\authorrunning{Desaster in der Software-Sicherheit (WiSe15/16)}
+\institute{Betreuer: Simon Greiner}
+\date{31.03.2016}
+\maketitle
+
+\section{Motivation}
+Durch fehlerhafte oder absichtlich manipulierte Programme können Datenlecks enstehen und diese ausgenutzt werden. 
+In Abbildung 1 \ref{fig:sql_code} sehen wir ein Ausschnit aus einem Java Programm. Es wird zunächst eine Datenbank Verbindung hergestellt und im Anschluß soll ein SQL Statement ausgeführt werden. Wie wir in Zeile 6 sehen, hängt das Statement von einer Benutzereingabe aus Zeile 5 ab. Ein Angreifer könnte in diesem Fall durch folgende Eingabe: "foo; DROP TABLE users" die Datenbank users löschen. Er könnte aber auch mit einem SELECT Statement Daten aus der Datenbank holen. Solche Szenarien lassen sich durch Überprüfung vermeiden. So ein Fehler ist aber nicht immer so einfach zu erkenne und wird übersehen. Da Computersysteme heutzutage in nahezu allen Bereichen unseres Lebens intigriert sind, können solche Datenlecks fatale folgen haben. Besonders Smartphones verwalten und verarbeiten viele vertauliche und private Daten und komunizieren dabei meißt mit der Außenwelt. Im Februar 2015 befanden sich im Google Play Store ca. 1.4 Millionen Apps. Diese sind jedem zugänglich, der auf seinem mobilen Gerät das Betriebssystem Android installiert hat. Bei so einer großen Anzahl Apps bietet der Google Play Store eine große Angriffsfläche. Deshalb ist es notwendig, den Fluss sensitiver Daten nachvollziehen zu können. Dies ist mithilfe einer Taint Analyse möglich.
+
+\begin{figure}
+\lstinputlisting[language=Java]{code/sql_example.java}
+\caption{Beispiel bei dem SQL Injections möglich sind}
+\label{fig:sql_code}
+\end{figure}
+
+\section{Taint Analyse}
+\subsection{statisch vs. dynamisch}
+Bei der Tain Analyse unterscheidet man zwischen statischer und dynamischer Taint Analyse. Der Vorteil der statischen Variante ist, dass das Kompilat nicht ausgeführt werden muss. Dies ist Hilfreich, da heutige Malware erkennen kann ob sie überwacht wird und kann ihr Verhalten anpassen. Im folgenden wird sich auf die statische Taint Analyse beschränkt.
+\subsection{Spezifikation und Vorgehen}
+Die Idee der Taint Analyse ist, dass jede von außen veränderbare Variable ein Sicherheitsrisiko birgt. Ihr Ziel ist es die Software gegen externe Angriffe sowie interne Risiken abzusichern. Dazu sucht die Taint Analyse nach Datenflüssen von möglichen tainted sources zu einem sink. Als source wird eine Funktion bezeichnet, die Quelle sensitiver Daten ist. Ein sink ist eine Funktion, die Daten möglicherweiese an nicht vertrauenswürdige Beobachter weitergibt. Welche Funktionen im einzelnen sources und sinks sind, muss vor der Taint Analyse angegeben werden.
+\subsection{Formal}
+Im Folgendem wird eine Formalisierung der Taint Analyse vorgestellt mithilfe von Schlussregeln \ref{fig:schlussregeln}.
+\begin{figure}[t]
+\begin{mathpar}
+\infer[(SOURCE)] {tainted(o, l)}{src(m,l)\\ m \rightarrow o}\\\\
+\infer[(TRANSFER)] {tainted(o_2, l)}{tainted(o_1,l)\\ m \rightarrow o_1 \\ n \rightarrow o_2 \\ transfer(m,n)}\\\\
+\infer[(SOURCE)] {flow(so, si)}{tainted(o,so)\\ m \rightarrow o \\ sink(m,si)} 
+\end{mathpar}
+\caption{Schlussregeln für die Taint Analyse}
+\label{fig:schlussregeln}
+\end{figure}
+% Normaler LNCS Zitierstil
+%\bibliographystyle{splncs}
+\bibliographystyle{itmalpha}
+\bibliography{literatur}
+
+\end{document}
