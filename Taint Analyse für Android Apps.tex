@@ -61,7 +61,8 @@
 
 \section{Motivation}
 Durch fehlerhafte oder absichtlich manipulierte Programme können Datenlecks enstehen und diese ausgenutzt werden. 
-In Abbildung 1 \ref{fig:sql_code} sehen wir ein Ausschnit aus einem Java Programm. Es wird zunächst eine Datenbank Verbindung hergestellt und im Anschluß soll ein SQL Statement ausgeführt werden. Wie wir in Zeile 6 sehen, hängt das Statement von einer Benutzereingabe aus Zeile 5 ab. Ein Angreifer könnte in diesem Fall durch folgende Eingabe: "foo; DROP TABLE users" die Datenbank users löschen. Er könnte aber auch mit einem SELECT Statement Daten aus der Datenbank holen. Solche Szenarien lassen sich durch Überprüfung vermeiden. So ein Fehler ist aber nicht immer so einfach zu erkenne und wird übersehen. Da Computersysteme heutzutage in nahezu allen Bereichen unseres Lebens intigriert sind, können solche Datenlecks fatale folgen haben. Besonders Smartphones verwalten und verarbeiten viele vertauliche und private Daten und komunizieren dabei meißt mit der Außenwelt. Im Februar 2015 befanden sich im Google Play Store ca. 1.4 Millionen Apps. Diese sind jedem zugänglich, der auf seinem mobilen Gerät das Betriebssystem Android installiert hat. Bei so einer großen Anzahl Apps bietet der Google Play Store eine große Angriffsfläche. Deshalb ist es notwendig, den Fluss sensitiver Daten nachvollziehen zu können. Dies ist mithilfe einer Taint Analyse möglich.
+In Abbildung \ref{fig:sql_code} sehen wir ein Ausschnit aus einem Java Programm. Es wird zunächst eine Datenbank Verbindung hergestellt und im Anschluß soll ein SQL Statement ausgeführt werden. Wie wir in Zeile 6 sehen, hängt das Statement von einer Benutzereingabe aus Zeile 5 ab. Ein Angreifer könnte in diesem Fall durch folgende Eingabe: "foo; DROP TABLE users" die Datenbank users löschen. Er könnte aber auch mit einem SELECT Statement Daten aus der Datenbank holen. Solche Szenarien lassen sich durch Überprüfung vermeiden. So ein Fehler ist aber nicht immer so einfach zu erkenne und wird übersehen. Da Computersysteme heutzutage in nahezu allen Bereichen unseres Lebens intigriert sind, können solche Datenlecks fatale folgen haben. Besonders Smartphones verwalten und verarbeiten viele vertauliche und private Daten und komunizieren dabei meißt mit der Außenwelt. Im Februar 2015 befanden sich im Google Play Store ca. 1.4 Millionen Apps. Diese sind jedem zugänglich, der auf seinem mobilen Gerät das Betriebssystem Android installiert hat. Bei so einer großen Anzahl Apps bietet der Google Play Store eine große Angriffsfläche. Deshalb ist es notwendig, den Fluss sensitiver Daten nachvollziehen zu können. Dies ist mithilfe einer Taint Analyse möglich.
+Der Autor möchte im folgenden zunächst auf die Grundlagen der Taint Analyse eingehen und danach die Probleme vorstellen, die bei einer Taint Analyse für Android Apps auftreten. Im Anschluß wird FlowDroid vorgestellt eine Taint Analyse für Android Apps.
 
 \begin{figure}
 \lstinputlisting[language=Java]{code/sql_example.java}
@@ -75,8 +76,12 @@ Bei der Tain Analyse unterscheidet man zwischen statischer und dynamischer Taint
 \subsection{Spezifikation und Vorgehen}
 Die Idee der Taint Analyse ist, dass jede von außen veränderbare Variable ein Sicherheitsrisiko birgt. Ihr Ziel ist es die Software gegen externe Angriffe sowie interne Risiken abzusichern. Dazu sucht die Taint Analyse nach Datenflüssen von möglichen tainted sources zu einem sink. Als source wird eine Funktion bezeichnet, die Quelle sensitiver Daten ist. Ein sink ist eine Funktion, die Daten möglicherweiese an nicht vertrauenswürdige Beobachter weitergibt. Welche Funktionen im einzelnen sources und sinks sind, muss vor der Taint Analyse angegeben werden.
 \subsection{Formal}
-Im Folgendem wird eine Formalisierung der Taint Analyse vorgestellt mithilfe von Schlussregeln \ref{fig:schlussregeln}.
-\begin{figure}[t]
+Im Folgendem wird eine Formalisierung der Taint Analyse vorgestellt mithilfe von Schlussregeln 
+(\ref{fig:schlussregeln}). Die SOURCE Regel beschreibt die Einfuhr von tainted Daten durch einen source. \emph{src(m,l)} bedeutet, dass dem Parameter \emph{m} Daten aus einer source zugewiesen werden mit dem Namen \emph{l}. \emph{l} stammt aus einem Source-Label-Set. Wenn nun auch \emph{m} auf einen Objektrepräsentanten \emph{o} zeigt, ist \emph{o} durch die Source \emph{l} tainted. Als Objektrepräsentant wird ein Objekt im Sinne der Analyse bezeichnet. Da nicht sicher ist auf wieviele Objekte tatsächlich zur Laufzeit ein Pointer zeigt, fasst man diese Menge zusammen und wählt einen Objekträpresentanten. 
+Die zweite Regel TRANSFER beschreibt die Übertragung von tainted Daten. \emph{transfer(m,n)} bedeutet, dass Daten vom Parameter \emph{m} zu \emph{n} übertragen werden. Wenn außerdem der Objektrepräsentant \emph{o1} von einer Source \emph{l} tainted ist und \emph{m} auf \emph{o1} und \emph{n} auf ein \emph{o2} zeigt, dann ist auch \emph{o2} durch \emph{l} tainted.
+Die letzte Regel SOURCE beschreibt den Datenfluss von verschmutzen Daten zu einem Sink. Wenn der  Objektrepräsentant \emph{o} durch eine Source \emph{so} tainted ist und die Variable \emph{m}, die auf \emph{o} zeigt einem Sink mit dem Namen \emph{si} übergeben wird, dann gibt es einen Datenfluss von der Source \emph{so} zum Sink \emph{si}. \emph{si} stammt aus einem Sink-Label-Set. 
+Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese Fixpunkt Iterativ ausführt, bis nichts mehr gefunden wird.
+\begin{figure}
 \begin{mathpar}
 \infer[(SOURCE)] {tainted(o, l)}{src(m,l)\\ m \rightarrow o}\\\\
 \infer[(TRANSFER)] {tainted(o_2, l)}{tainted(o_1,l)\\ m \rightarrow o_1 \\ n \rightarrow o_2 \\ transfer(m,n)}\\\\
@@ -85,6 +90,12 @@ Im Folgendem wird eine Formalisierung der Taint Analyse vorgestellt mithilfe von
 \caption{Schlussregeln für die Taint Analyse}
 \label{fig:schlussregeln}
 \end{figure}
+
+\subsubsection{Beispiel}
+Wendet man diese Regeln an dem Beispiel aus Abbildung \ref{fig:sql_code} an, bekommet man folgendes Ergebnis. Zunächst müssen die Sinks und Sources definiert werden. Dazu wird die Funktion \emph{readLine} aus Zeile 4 in das Source-Label-Set eingefügt. In das Sink-Label-Set wird die Funktion \emph{executeQuery} eingefügt. Die Taint Analyse wird zunächst die SOURCE Regel in Zeile 4 anwenden, da dort Daten aus einer Source dem String \emph{name} zugewiesen werden. Somit wird der String \emph{name} als tainted markiert. Als nächstes wird die TRANSFER Regel in Zeile 5 angewendet. Hier werden Daten vom String "name" zum String \emph{sql} übertragen. Deshalb wird auch hier der String \emph{sql} als tainted markiert. In Zeile 5 wird die SINK Regel angewendet. Hier wird der String \emph{sql} in den Sink \emph{executeQuery} übergeben. Da \emph{sql} tainted ist, wird der Sink \emph{executeQuery} auch als tainted markiert. Somit wurde ein tainted Datenfluss von der Source \emph{readLine} zum Sink \emph{executeQuery} gefunden.
+
+\subsection{Sanitization}
+Nachdem die Taint Analyse Datenflüsse von sources zu sinks entdeckt hat, sollte dem Programmierer die Möglichkeit gegeben werden, seine eingehenden Daten zu überprüfen und zu säubern. In dem Beispiel aus Abbildung \ref{fig:sql_code} Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}, die Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen konvertiert. Aus dem Zeichen ... wird ... .
 % Normaler LNCS Zitierstil
 %\bibliographystyle{splncs}
 \bibliographystyle{itmalpha}
