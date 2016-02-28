@@ -33,7 +33,7 @@
 
 \lstset{frame=tb,
   language=Java,
-  aboveskip=8mm,
+  aboveskip=3mm,
   belowskip=3mm,
   showstringspaces=false,
   columns=flexible,
@@ -95,7 +95,47 @@ Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese 
 Wendet man diese Regeln an dem Beispiel aus Abbildung \ref{fig:sql_code} an, bekommet man folgendes Ergebnis. Zunächst müssen die Sinks und Sources definiert werden. Dazu wird die Funktion \emph{readLine} aus Zeile 4 in das Source-Label-Set eingefügt. In das Sink-Label-Set wird die Funktion \emph{executeQuery} eingefügt. Die Taint Analyse wird zunächst die SOURCE Regel in Zeile 4 anwenden, da dort Daten aus einer Source dem String \emph{name} zugewiesen werden. Somit wird der String \emph{name} als tainted markiert. Als nächstes wird die TRANSFER Regel in Zeile 5 angewendet. Hier werden Daten vom String "name" zum String \emph{sql} übertragen. Deshalb wird auch hier der String \emph{sql} als tainted markiert. In Zeile 5 wird die SINK Regel angewendet. Hier wird der String \emph{sql} in den Sink \emph{executeQuery} übergeben. Da \emph{sql} tainted ist, wird der Sink \emph{executeQuery} auch als tainted markiert. Somit wurde ein tainted Datenfluss von der Source \emph{readLine} zum Sink \emph{executeQuery} gefunden.
 
 \subsection{Sanitization}
-Nachdem die Taint Analyse Datenflüsse von sources zu sinks entdeckt hat, sollte dem Programmierer die Möglichkeit gegeben werden, seine eingehenden Daten zu überprüfen und zu säubern. In dem Beispiel aus Abbildung \ref{fig:sql_code} Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}, die Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen konvertiert. Aus dem Zeichen ... wird ... .
+Nachdem die Taint Analyse Datenflüsse von sources zu sinks entdeckt hat, sollte dem Programmierer die Möglichkeit gegeben werden, seine eingehenden Daten zu überprüfen und zu säubern. In dem Beispiel aus Abbildung \ref{fig:sql_code} würde zum Beispiel die Funktion \emph{onlyLetters(s : String) : String} die Benutzereingabe nehmen und alle nicht Buchstaben aus der Eingabe entfernen und einen String zurückgeben, der nur aus Buchstaben besteht. Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}, die Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen konvertiert. Aus dem Zeichen '\textless' wird "\&lt;".
+Neben den eingebauten sanitization Funktionen können auch eigene Funktionen geschrieben werden. Dies kann jedoch gefährlich werden, da Daten die einen säuberungsprozess durchlaufen haben als harmlos angesehen werden. Das kann zu Problemen führen, wenn die Funktion nicht vollständig oder falsch ist, da es im vornherein schwierig festzulegen ist welche Fälle durch eine Sanitization Funktion beachtet werden müssen. Außerdem müssen die Sanitization und die sink Funktion zusammen passen. In Abbildung \ref{fig:sql_code} würde die Funktion \emph{htmlentities} die Eingabe nicht säubern. 
+
+\subsection{Präzision}
+Eine gute Analyse sollte in der Lage sein false positives nicht zu melden. Dadurch wird die manuelle aussortierung dieser durch den Benutzer vermieden. Als false positives werden Fehlermeldungen bezeichnet, die einen Fehler anzeigen, obwohl keiner vorliegt. Mit den folgenden Eigenschaften lassen sich false positives vermeiden.
+\subsubsection{Fluss-Sensitivität}
+In Abbildung \ref{fig:fluss_code} wird einem String s in Zeile 2 zunächst ein harmloser Wert zugewiesen. Im Anschluss wird dieser String einem Sink übergeben. Obwohl die tainted Daten, die dem String s in Zeile 4 zugewiesen werden nie in den sink kommen, wird dieser als tainted markiert. Grund dafür ist, dass die Reihenfolge nicht beachtet wird. Beachtet man diese findet die Analyse den false positive nicht. Diese Eigenschaft nennt man Fluss-Sensitivität.
+
+\subsubsection{Kontext-Sensitivität}
+Obwohl s2 in Abbildung \ref{fig:context_code} keine tainted Daten zugewiesen bekommt, wird der sink in Zeile 4 als tainted markiert. Grund dafür ist die Funktion \emph{id(s : String) : String} aus Zeile 7. Da s1 und s2 die Funktion \emph{id} aufrufen, zeigt das \emph{s} aus Zeile 8 sowohl auf s1 als auf s2. Da id mit den tainted Daten aus dem Source aufgerufen wird, werden s1 und s2 als tainted markiert. Durch Beachtung des Aufrufkontexts, zeigt das s aus Zeile 8 entweder auf s1 oder auf s2. Somit wird bei dieser herangehensweise kein Fehler gefunden.
+
+\subsubsection{Objekt-Sensitivität}
+Ein ähnliches Problem wie zuvor ist in Abbildung \ref{fig:object_code} zu sehen. Die Funktion \emph{getValue() : String} der Klasse Foo zeigt sowohl auf o1 als auf o2. Obwohl der Sink in Zeile 7 keine tainted Daten erhält wird hier ein Fehler angezeigt, da nicht zwischen den einzelnen Objekten unterschieden werden kann. Eine Analyse die Objekt-Sensitiv ist findet solche flase positives nicht. Die Objekt-Sensitivität kann auch als Subtyp der Kontext-Sensitivität gesehen werden.
+
+\subsubsection{Feld-Sensitivität}
+In der letzten Abbildung (\ref{fig:field_code}) ist ein Objekt o, dass mehrere Felder hat. Einem der Felder werden tainted Daten aus einer Source zugewiesen. Dem anderen Feld werden harmlose Daten zugewiesen. Obwohl das harmlose Feld dem Sink übergeben wird, wird der Sink als tainted markiert. Der Grund ist, dass Felder bei Feld-Insensitiven Analysen zu ihrem Basis Objekt zusammengeführt werden und als ganzes betrachtet werden. Da hier field2 tainted ist, wird das ganze Objekt o tainted und somit auch das field1. Bei einer Feld-Sensitiven Analyse werden die Felder einzeln betrachtet und ein Fehler wird hier nicht gefunden.
+
+\begin{figure}
+\lstinputlisting[language=Java]{code/flow_sensitive_example.java}
+\caption{Fluss-Sensitivität}
+\label{fig:fluss_code}
+\end{figure}
+
+\begin{figure}
+\lstinputlisting[language=Java]{code/context_sensitive_example.java}
+\caption{Kontext-Sensitivität}
+\label{fig:context_code}
+\end{figure}
+
+\begin{figure}
+\lstinputlisting[language=Java]{code/object_sensitive_example.java}
+\caption{Objekt-Sensitivität}
+\label{fig:object_code}
+\end{figure}
+ 
+\begin{figure}
+\lstinputlisting[language=Java]{code/field_sensitive_example.java}
+\caption{Feld-Sensitivität}
+\label{fig:field_code}
+\end{figure}
+
 % Normaler LNCS Zitierstil
 %\bibliographystyle{splncs}
 \bibliographystyle{itmalpha}
