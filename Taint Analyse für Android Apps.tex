@@ -1,7 +1,7 @@
 \documentclass[runningheads]{llncs}
 
 %---- Codierung----%
-\usepackage[utf8]{inputenc}
+\usepackage[utf8]{inputenc} 
 %\usepackage[T1]{fontenc}
 \usepackage{graphicx}
 %\usepackage{url}
@@ -26,7 +26,7 @@
 % Syntax highlighting von Java Code
 \usepackage{listings}
 \usepackage{color}
-
+ 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
@@ -61,9 +61,9 @@
 \maketitle
 
 \section{Motivation}
-Durch fehlerhafte oder absichtlich manipulierte Programme können Datenlecks enstehen und diese ausgenutzt werden. 
-In Abbildung \ref{fig:sql_code} sehen wir ein Ausschnit aus einem Java Programm. Es wird zunächst eine Datenbank Verbindung hergestellt und im Anschluß soll ein SQL Statement ausgeführt werden. Wie wir in Zeile 6 sehen, hängt das Statement von einer Benutzereingabe aus Zeile 5 ab. Ein Angreifer könnte in diesem Fall durch folgende Eingabe: "foo; DROP TABLE users" die Datenbank users löschen. Er könnte aber auch mit einem SELECT Statement Daten aus der Datenbank holen. Solche Szenarien lassen sich durch Überprüfung vermeiden. So ein Fehler ist aber nicht immer so einfach zu erkenne und wird übersehen. Da Computersysteme heutzutage in nahezu allen Bereichen unseres Lebens intigriert sind, können solche Datenlecks fatale folgen haben. Besonders Smartphones verwalten und verarbeiten viele vertauliche und private Daten und komunizieren dabei meißt mit der Außenwelt. Im Februar 2015 befanden sich im Google Play Store ca. 1.4 Millionen Apps. Diese sind jedem zugänglich, der auf seinem mobilen Gerät das Betriebssystem Android installiert hat. Bei so einer großen Anzahl Apps bietet der Google Play Store eine große Angriffsfläche. Deshalb ist es notwendig, den Fluss sensitiver Daten nachvollziehen zu können. Dies ist mithilfe einer Taint Analyse möglich.
-Der Autor möchte im folgenden zunächst auf die Grundlagen der Taint Analyse eingehen und danach die Probleme vorstellen, die bei einer Taint Analyse für Android Apps auftreten. Im Anschluß wird FlowDroid vorgestellt eine Taint Analyse für Android Apps.
+Durch fehlerhafte oder absichtlich manipulierte Programme können Datenlecks enstehen. Diese Datenlecks können ausgenutzt werden. 
+In Abbildung \ref{fig:sql_code} ist ein Ausschnit aus einem Java Programm. Es wird zunächst eine Verbindung zu einer Datenbank hergestellt. Im Anschluß soll ein SQL Statement ausgeführt werden. Das SQL Statement in Zeile sechs hängt von einer Benutzereingabe aus Zeile fünf ab. Ein Angreifer könnte in diesem Fall durch folgende Eingabe: "\emph{foo; DROP TABLE users}" die Datenbank \emph{users} löschen. Er könnte aber auch mit einem SELECT Statement Daten aus der Datenbank holen. \\So ein Fehler lässt sich durch Überprüfung der Benutzereingabe vermeiden. Es ist aber nicht immer so einfach einen solchen zu erkennen. \\ Da Computersysteme heutzutage in nahezu allen Bereichen unseres Lebens intigriert sind, können solche Datenlecks fatale folgen haben. Besonders Smartphones verwalten und verarbeiten viele vertauliche und private Daten und komunizieren dabei oft mit der Außenwelt. Im Februar 2015 befanden sich im Google Play Store ca. 1.4 Millionen Apps. Diese Apps sind jedem zugänglich, der auf seinem mobilen Gerät das Betriebssystem Android installiert hat. Bei so einer großen Anzahl Apps bietet der Google Play Store eine große Angriffsfläche für Angreifer die solche Datenlecks ausnutzen. Deshalb ist es notwendig, den Fluss sensitiver Daten nachvollziehen zu können. Dies ist mithilfe einer Taint Analyse möglich.
+\\Der Autor möchte im folgenden zunächst auf die Grundlagen der Taint Analyse eingehen und danach die Probleme vorstellen, die bei einer Taint Analyse für Android Apps auftreten. Im Anschluß wird FlowDroid vorgestellt eine Taint Analyse für Android Apps.
 
 \begin{figure}
 \lstinputlisting[language=Java]{code/sql_example.java}
@@ -71,17 +71,23 @@ Der Autor möchte im folgenden zunächst auf die Grundlagen der Taint Analyse ei
 \label{fig:sql_code}
 \end{figure}
 
+\begin{figure}[htp]
+\centering
+\includegraphics[scale=0.60]{img/playstore.png}
+\caption{Anzahl der verfügbaren Apps im Google Play Store von Dezember 2009 bis Februar 2015 (in 1.000), aus \cite{playstore}}
+\label{fig:playstore}
+\end{figure} 
+
 \section{Taint Analyse}
-\subsection{statisch vs. dynamisch}
-Bei der Tain Analyse unterscheidet man zwischen statischer und dynamischer Taint Analyse. Der Vorteil der statischen Variante ist, dass das Kompilat nicht ausgeführt werden muss. Dies ist Hilfreich, da heutige Malware erkennen kann ob sie überwacht wird und kann ihr Verhalten anpassen. Im folgenden wird sich auf die statische Taint Analyse beschränkt.
-\subsection{Spezifikation und Vorgehen}
-Die Idee der Taint Analyse ist, dass jede von außen veränderbare Variable ein Sicherheitsrisiko birgt. Ihr Ziel ist es die Software gegen externe Angriffe sowie interne Risiken abzusichern. Dazu sucht die Taint Analyse nach Datenflüssen von möglichen tainted sources zu einem sink. Als source wird eine Funktion bezeichnet, die Quelle sensitiver Daten ist. Ein sink ist eine Funktion, die Daten möglicherweiese an nicht vertrauenswürdige Beobachter weitergibt. Welche Funktionen im einzelnen sources und sinks sind, muss vor der Taint Analyse angegeben werden.
+\subsection{Statische Taint Analyse}
+Die Taint Analyse ist eine Datenflussanalyse. Bei der Tain Analyse unterscheidet man zwischen statischer und dynamischer Taint Analyse. Der Vorteil der statischen Variante ist, dass das Kompilat nicht ausgeführt werden muss. Dies ist hilfreich, da heutige Malware erkennen kann ob sie überwacht wird und  ihr Verhalten der Situation anpasst. Im folgenden wird sich auf die statische Taint Analyse beschränkt.
+\subsection{Spezifikation }
+Die Idee der Taint Analyse ist, dass jede von außen veränderbare Variable ein Sicherheitsrisiko birgt. Ihr Ziel ist es, die Software gegen externe Angriffe, sowie interne Risiken abzusichern. Dazu sucht die Taint Analyse nach Datenflüssen von möglichen tainted Sources zu einem Sink. Als Source wird eine Funktion bezeichnet, die Quelle sensitiver Daten ist. Ein Sink ist eine Funktion, die Daten möglicherweiese an nicht vertrauenswürdige Beobachter weitergibt. Welche Funktionen im einzelnen Sources und Sinks sind, muss der Taint Analyse mitgegeben werden.
 \subsection{Formal}
-Im Folgendem wird eine Formalisierung der Taint Analyse vorgestellt mithilfe von Schlussregeln 
-(\ref{fig:schlussregeln}). Die SOURCE Regel beschreibt die Einfuhr von tainted Daten durch einen source. \emph{src(m,l)} bedeutet, dass dem Parameter \emph{m} Daten aus einer source zugewiesen werden mit dem Namen \emph{l}. \emph{l} stammt aus einem Source-Label-Set. Wenn nun auch \emph{m} auf einen Objektrepräsentanten \emph{o} zeigt, ist \emph{o} durch die Source \emph{l} tainted. Als Objektrepräsentant wird ein Objekt im Sinne der Analyse bezeichnet. Da nicht sicher ist auf wieviele Objekte tatsächlich zur Laufzeit ein Pointer zeigt, fasst man diese Menge zusammen und wählt einen Objekträpresentanten. 
-Die zweite Regel TRANSFER beschreibt die Übertragung von tainted Daten. \emph{transfer(m,n)} bedeutet, dass Daten vom Parameter \emph{m} zu \emph{n} übertragen werden. Wenn außerdem der Objektrepräsentant \emph{o1} von einer Source \emph{l} tainted ist und \emph{m} auf \emph{o1} und \emph{n} auf ein \emph{o2} zeigt, dann ist auch \emph{o2} durch \emph{l} tainted.
-Die letzte Regel SOURCE beschreibt den Datenfluss von verschmutzen Daten zu einem Sink. Wenn der  Objektrepräsentant \emph{o} durch eine Source \emph{so} tainted ist und die Variable \emph{m}, die auf \emph{o} zeigt einem Sink mit dem Namen \emph{si} übergeben wird, dann gibt es einen Datenfluss von der Source \emph{so} zum Sink \emph{si}. \emph{si} stammt aus einem Sink-Label-Set. 
-Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese Fixpunkt Iterativ ausführt, bis nichts mehr gefunden wird.
+Im Folgendem wird die Taint Analyse mithilfe von Schlussregeln formalisiert(\ref{fig:schlussregeln}). Die SOURCE Regel beschreibt die Einfuhr von tainted Daten durch einen Source. \emph{src(m,l)} bedeutet, dass dem Parameter \emph{m} Daten aus einer Source zugewiesen werden mit dem Namen \emph{l}. \emph{l} ist der Name einer Source, die aus einem Source-Label-Set stammt. Wenn \emph{m} auf einen Objektrepräsentanten \emph{o} zeigt, ist \emph{o} durch die Source \emph{l} tainted. \\Als Objektrepräsentant wird ein Objekt im Sinne der Analyse bezeichnet. Da nicht sicher ist auf wieviele Objekte tatsächlich zur Laufzeit ein Zeiger zeigt, fasst man diese Menge zusammen und wählt einen Objekträpresentanten. 
+\\Die zweite Regel TRANSFER beschreibt die Übertragung von tainted Daten. \emph{transfer(m,n)} bedeutet, dass Daten vom Parameter \emph{m} zu \emph{n} übertragen werden. Wenn außerdem der Objektrepräsentant \emph{o1} von einer Source \emph{l} tainted ist und \emph{m} auf \emph{o1} und \emph{n} auf ein \emph{o2} zeigt, dann ist auch \emph{o2} durch \emph{l} tainted.
+\\Die letzte Regel SOURCE beschreibt den Datenfluss von verschmutzen Daten zu einem Sink. Wenn der  Objektrepräsentant \emph{o} durch eine Source \emph{so} tainted ist und die Variable \emph{m}, die auf \emph{o} zeigt einem Sink mit dem Namen \emph{si} übergeben wird, dann gibt es einen Datenfluss von der Source \emph{so} zum Sink \emph{si}. \emph{si} ist dabei der Name eines Sinks aus einem Sink-Label-Set. 
+\\Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese solange immer wieder ausführt, bis sich am Ergebniss nichts mehr ändert.
 \begin{figure}
 \begin{mathpar}
 \infer[(SOURCE)] {tainted(o, l)}{src(m,l)\\ m \rightarrow o}\\\\
@@ -93,29 +99,34 @@ Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese 
 \end{figure}
 
 \subsubsection{Beispiel}
-Wendet man diese Regeln an dem Beispiel aus Abbildung \ref{fig:sql_code} an, bekommet man folgendes Ergebnis. Zunächst müssen die Sinks und Sources definiert werden. Dazu wird die Funktion \emph{readLine} aus Zeile 4 in das Source-Label-Set eingefügt. In das Sink-Label-Set wird die Funktion \emph{executeQuery} eingefügt. Die Taint Analyse wird zunächst die SOURCE Regel in Zeile 4 anwenden, da dort Daten aus einer Source dem String \emph{name} zugewiesen werden. Somit wird der String \emph{name} als tainted markiert. Als nächstes wird die TRANSFER Regel in Zeile 5 angewendet. Hier werden Daten vom String "name" zum String \emph{sql} übertragen. Deshalb wird auch hier der String \emph{sql} als tainted markiert. In Zeile 5 wird die SINK Regel angewendet. Hier wird der String \emph{sql} in den Sink \emph{executeQuery} übergeben. Da \emph{sql} tainted ist, wird der Sink \emph{executeQuery} auch als tainted markiert. Somit wurde ein tainted Datenfluss von der Source \emph{readLine} zum Sink \emph{executeQuery} gefunden.
+Im folgenden wird dargestellt wie die Anwendung der Regeln auf das Beispiel aus Abbildung \ref{fig:sql_code} aussieht. 
+\\Zunächst müssen die Sources und Sinks definiert werden. Dazu wird die Funktion \emph{readLine} aus Zeile vier in das Source-Label-Set eingefügt. In das Sink-Label-Set wird die Funktion \emph{executeQuery} aus Zeile sechs eingefügt. Die Taint Analyse wird zunächst die SOURCE Regel in Zeile vier anwenden, da dort Daten aus einer Source dem String \emph{name} zugewiesen werden. Somit wird der String \emph{name} als tainted markiert. Als nächstes wird die TRANSFER Regel in Zeile fünf angewendet. Hier werden Daten vom String "name" zum String \emph{sql} übertragen. Deshalb wird auch hier der String \emph{sql} als tainted markiert. Schließlich wird in Zeile sechs die SINK Regel angewendet. Hier wird der String \emph{sql} in den Sink \emph{executeQuery} übergeben. Da \emph{sql} tainted ist, wird der Sink \emph{executeQuery} auch als tainted markiert. Somit wurde ein tainted Datenfluss von der Source \emph{readLine} zum Sink \emph{executeQuery} gefunden.
 
 \subsection{Sanitization}
-Nachdem die Taint Analyse Datenflüsse von sources zu sinks entdeckt hat, sollte dem Programmierer die Möglichkeit gegeben werden, seine eingehenden Daten zu überprüfen und zu säubern. In dem Beispiel aus Abbildung \ref{fig:sql_code} würde zum Beispiel die Funktion \emph{onlyLetters(s : String) : String} die Benutzereingabe nehmen und alle nicht Buchstaben aus der Eingabe entfernen und einen String zurückgeben, der nur aus Buchstaben besteht. Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}, die Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen konvertiert. Aus dem Zeichen '\textless' wird "\&lt;".
-Neben den eingebauten sanitization Funktionen können auch eigene Funktionen geschrieben werden. Dies kann jedoch gefährlich werden, da Daten die einen säuberungsprozess durchlaufen haben als harmlos angesehen werden. Das kann zu Problemen führen, wenn die Funktion nicht vollständig oder falsch ist, da es im vornherein schwierig festzulegen ist welche Fälle durch eine Sanitization Funktion beachtet werden müssen. Außerdem müssen die Sanitization und die sink Funktion zusammen passen. In Abbildung \ref{fig:sql_code} würde die Funktion \emph{htmlentities} die Eingabe nicht säubern. 
+Nachdem die Taint Analyse Datenflüsse von sources zu sinks entdeckt hat, sollte dem Programmierer die Möglichkeit gegeben werden, seine Daten zu überprüfen und zu säubern. 
+\\In Abbildung \ref{fig:sql_code} würde zum Beispiel die Funktion \emph{onlyLetters(s : String) : String} die Benutzereingabe als Parameter entgegen nehmen, alle nicht Buchstaben aus der Eingabe entfernen und einen String zurückgeben, der nur aus Buchstaben besteht. Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}. Diese Funktion konvertiert Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen. Aus dem Zeichen '\textless' wird "\&lt;".
+\\Neben den eingebauten sanitization Funktionen können auch eigene Funktionen geschrieben werden. Dies kann jedoch gefährlich werden, da Daten die einen Säuberungsprozess durchlaufen haben als harmlos angesehen werden. Das kann zu Problemen führen, wenn die Funktion nicht vollständig oder falsch ist. Grund für solche Fehler ist, dass es schwierig ist im Vornherein festzulegen welche Fälle durch eine Sanitization Funktion beachtet werden müssen. Außerdem müssen die Sanitization und die Sink Funktion zusammen passen. In Abbildung \ref{fig:sql_code} würde die Funktion \emph{htmlentities} die Eingabe nicht säubern. 
 
 \subsection{Präzision}
-Eine gute Analyse sollte in der Lage sein false positives nicht zu melden. Dadurch wird die manuelle aussortierung dieser durch den Benutzer vermieden. Als false positives werden Fehlermeldungen bezeichnet, die einen Fehler anzeigen, obwohl keiner vorliegt. Mit den folgenden Eigenschaften lassen sich false positives vermeiden.
+Eine gute Analyse sollte in der Lage sein false-positives nicht zu melden. Dadurch wird die manuelle Aussortierung dieser durch den Benutzer vermieden. Als false-positives werden Fehlermeldungen bezeichnet, die einen Fehler anzeigen, obwohl keiner vorliegt. Mit den folgenden Eigenschaften lassen sich einige false-positives vermeiden.
+
 \subsubsection{Fluss-Sensitivität}
-In Abbildung \ref{fig:fluss_code} wird einem String s in Zeile 2 zunächst ein harmloser Wert zugewiesen. Im Anschluss wird dieser String einem Sink übergeben. Obwohl die tainted Daten, die dem String s in Zeile 4 zugewiesen werden nie in den sink kommen, wird dieser als tainted markiert. Grund dafür ist, dass die Reihenfolge nicht beachtet wird. Beachtet man diese findet die Analyse den false positive nicht. Diese Eigenschaft nennt man Fluss-Sensitivität.
-
-
+In Abbildung \ref{fig:fluss_code} wird einem String \emph{s} in Zeile zwei zunächst ein harmloser Wert zugewiesen. Im Anschluss wird dieser String einem Sink übergeben. Obwohl die tainted Daten, die dem String \emph{s} in Zeile vier zugewiesen werden nie in den Sink kommen, wird der Sink trotzdem als tainted markiert. Grund dafür ist, dass die Reihenfolge hier nicht beachtet wird. Beachtet man diese meldet die Analyse hier keinen Fehler. 
+\\Diese Eigenschaft nennt man Fluss-Sensitivität.
 
 \subsubsection{Kontext-Sensitivität}
-Obwohl s2 in Abbildung \ref{fig:context_code} keine tainted Daten zugewiesen bekommt, wird der sink in Zeile 4 als tainted markiert. Grund dafür ist die Funktion \emph{id(s : String) : String} aus Zeile 7. Da s1 und s2 die Funktion \emph{id} aufrufen, zeigt das \emph{s} aus Zeile 8 sowohl auf s1 als auf s2. Da id mit den tainted Daten aus dem Source aufgerufen wird, werden s1 und s2 als tainted markiert. Durch Beachtung des Aufrufkontexts, zeigt das s aus Zeile 8 entweder auf s1 oder auf s2. Somit wird bei dieser herangehensweise kein Fehler gefunden.
-
+Obwohl \emph{s2} in Abbildung \ref{fig:context_code} keine tainted Daten zugewiesen bekommt, wird der Sink in Zeile vier als tainted markiert. Der Grund hierfür ist die Funktion \emph{id(s : String) : String} aus Zeile sieben. Da \emph{s1} und \emph{s2} die Funktion \emph{id} aufrufen, zeigt das \emph{s} aus Zeile acht sowohl auf \emph{s1} als auf \emph{s2}. Da \emph{id} mit den tainted Daten aus dem Source aufgerufen wird, werden \emph{s1} und \emph{s2} als tainted markiert. 
+\\Beachtet man jedoch den Kontext des Aufrufers, zeigt das \emph{s} aus Zeile acht entweder auf \emph{s1} oder auf \emph{s2}. Somit wird bei dieser herangehensweise kein Fehler gemeldet.
 
 \subsubsection{Objekt-Sensitivität}
-Ein ähnliches Problem wie zuvor ist in Abbildung \ref{fig:object_code} zu sehen. Die Funktion \emph{getValue() : String} der Klasse Foo zeigt sowohl auf o1 als auf o2. Obwohl der Sink in Zeile 7 keine tainted Daten erhält wird hier ein Fehler angezeigt, da nicht zwischen den einzelnen Objekten unterschieden werden kann. Eine Analyse die Objekt-Sensitiv ist findet solche flase positives nicht. Die Objekt-Sensitivität kann auch als Subtyp der Kontext-Sensitivität gesehen werden.
-
+Ein ähnliches Problem wie zuvor ist in Abbildung \ref{fig:object_code} zu sehen. Die Funktion \emph{getValue() : String} der Klasse Foo zeigt sowohl auf \emph{o1} als auf \emph{o2}. Obwohl der Sink in Zeile sieben keine tainted Daten erhält wird hier ein Fehler gemeldet, denn die Analyse kann nicht zwischen den einzelnen Objekten unterschieden. 
+\\Eine Analyse die Objekt-Sensitiv ist meldet hier keinen Fehler. 
+\\Die Objekt-Sensitivität ist ein Subtyp der Kontext-Sensitivität.
 
 \subsubsection{Feld-Sensitivität}
-In der letzten Abbildung (\ref{fig:field_code}) ist ein Objekt o, dass mehrere Felder hat. Einem der Felder werden tainted Daten aus einer Source zugewiesen. Dem anderen Feld werden harmlose Daten zugewiesen. Obwohl das harmlose Feld dem Sink übergeben wird, wird der Sink als tainted markiert. Der Grund ist, dass Felder bei Feld-Insensitiven Analysen zu ihrem Basis Objekt zusammengeführt werden und als ganzes betrachtet werden. Da hier field2 tainted ist, wird das ganze Objekt o tainted und somit auch das field1. Bei einer Feld-Sensitiven Analyse werden die Felder einzeln betrachtet und ein Fehler wird hier nicht gefunden.
+In der letzten Abbildung (\ref{fig:field_code}) ist ein Objekt \emph{o}, dass mehrere Felder besitzt. Einem der Felder werden tainted Daten aus einer Source zugewiesen. Dem anderen Feld werden harmlose Daten zugewiesen. Obwohl das harmlose Feld dem Sink übergeben wird, wird der Sink trotzdem als tainted markiert. Der Grund hierfür ist, dass Felder bei Feld-Insensitiven Analysen zu ihrem Basis Objekt zusammengeführt werden und als ganzes betrachtet werden. Da hier \emph{field2} tainted ist, wird das ganze Objekt \emph{o} als tainted markiert und somit auch das \emph{field1}. 
+\\Bei einer Feld-Sensitiven Analyse werden die Felder einzeln betrachtet und kein Fehler wird gemeldet.
+
  \begin{figure}
 \lstinputlisting[language=Java]{code/flow_sensitive_example.java}
 \caption{Fluss-Sensitivität}
@@ -136,29 +147,33 @@ In der letzten Abbildung (\ref{fig:field_code}) ist ein Objekt o, dass mehrere F
 \caption{Feld-Sensitivität}
 \label{fig:field_code}
 \end{figure}
-\\\\
+
 \section{Android}
 %\subsection{Grundlagen}
-Android ist sowohl ein Betriebssystem als auch eine Software-Platform für mobile Geräte. Es bietet den Entwicklern eine Schnittstelle an, um auf verschiedene System Funktionalitäten des mobilen Gerätes zuzugreifen. Der Nutzerstandort ist zum Beispiel eine solche Funktionalität. Der Entwickler muss die von ihm genutzte Funktionalität in die \emph{AndroidManifest.xml} eintragen. Der Benutzer, der die App installieren möchte muss dieser die Berechtigung geben diese Funktionalitäten verwenden zu dürfen. Werden die Berechtigungen verweigert, kann die App nicht installiert werden. Das Problem ist, dass oft zu viele Berechtigungen gefordert werden. Entweder aus Unkenntnis oder mit bösen Absichten. Außerdem sind viele Berechtigungen zu mächtig und können ausgenutzt werden. Eine social-network App zum Beispiel, möchte die Berechtigung\\\emph{android.permission.READ\_CONTACTS} um neue Freunde anhand der Email Adresse vorschlagen zu können. Sie kann aber mit dieser Berechtigung auch die Telefonnummern und sonstige Kontaktdaten auslesen, auch wenn der Kontakt nicht bei dem Dienst angemeldet ist. Trojaner können dies ausnutzen. Um dem entgegenzuwirken kann man die Datenflüsse einer Android App mithilfe der Taint Analyse analysieren. Dabei gibt es einige Besonderheiten und Schwierigkeiten gegenüber anderen \emph{JAVA} Programmen. Eine Android App kann aus vier verschiedenen Komponenten bestehen.\\\\
+Android ist sowohl ein Betriebssystem als auch eine Software-Platform für mobile Geräte. Es bietet Entwicklern eine Schnittstelle an, um auf verschiedene Systemfunktionalitäten des mobilen Gerätes zuzugreifen. Der Nutzerstandort ist zum Beispiel eine solche Funktionalität. Der Entwickler muss die von ihm genutzte Funktionalität in die \emph{AndroidManifest.xml} eintragen. Der Benutzer, der die App installieren möchte muss dieser die Berechtigung geben auf diese Funktionalitäten zugreifen zu dürfen. Werden die Berechtigungen verweigert, kann die App nicht installiert werden. Das Problem ist, dass oft zu viele Berechtigungen gefordert werden. Entweder aus Unkenntnis oder mit bösen Absichten. Außerdem sind viele Berechtigungen zu mächtig und können ausgenutzt werden. Eine social-network App zum Beispiel, möchte die Berechtigung\\\emph{android.permission.READ\_CONTACTS} um neue Freunde anhand der Email Adresse vorschlagen zu können. Sie kann aber mit dieser Berechtigung auch Telefonnummern und sonstige Kontaktdaten auslesen, auch wenn der Kontakt nicht bei dem Dienst angemeldet ist. Trojaner können dies ausnutzen. 
+\\Um dem entgegenzuwirken kann man die Datenflüsse einer Android App mithilfe der Taint Analyse analysieren. Dabei gibt es einige Besonderheiten und 
+\\Schwierigkeiten gegenüber anderen \emph{JAVA} Programmen. Eine Android App kann nämlich aus vier verschiedenen Komponenten bestehen.\\\\
 \begin{tabular}{ll}
 	Activity & Einzelner Screen, der für den Benutzer sichtbar ist\\
 	Service & Eine Aktion die im Hintergrund abläuft\\
 	Content Provider & Ist zuständig für das Speichern von Daten\\
-	Broadcast Reciever & Wartet auf ein globales Ereignis und führt eine vodefinierte \\
-	& Aktion durch\\\\
+	Broadcast Reciever & Wartet auf ein globales Ereignis und führt eine vordefinierte \\
+	& Aktion aus\\\\
 \end{tabular}
-Aufgrund dieser Besonderheit entstehen bestimmte Probleme für eine Taint Analyse. Zum einen hat eine Android App keine zentrale main Methode sondern mehrere Einstiegspunkte. Eine App kann zum Beispiel aus drei Activities und einem Service bestehen. Es gibt zwar eine Haupt-Activity, aber welche Komponente als nächstes an die Reihe kommt ist unbestimmt, da es meißt auf die Benutzereingabe ankommt. Außerdem haben die einzelnen Komponenten besonderes Verhalten. Sie können zum Beispiel gestartet und beendet werden oder angehalten werden, wenn der Speicher voll ist und fortgesetzt, wenn wieder Speicher frei ist. Somit entsteht ein komplizierter Lebenszyklus, mit dem die Taint Analyse umgehen muss. Außerdem muss vor der Analyse spezifiziert werden, was sinks und sources in Android sind.
+Aufgrund dieser Besonderheit entstehen bestimmte Probleme für eine Taint Analyse. Zum einen hat eine Android App keine zentrale \emph{main} Methode, sondern mehrere Einstiegspunkte. Eine App kann zum Beispiel aus drei Activities und einem Service bestehen. Es gibt zwar eine Haupt-Activity, aber welche Komponente als nächstes an die Reihe kommt ist im allgemeinen nicht bestimmbar, da es oft auf die Benutzereingabe ankommt. Außerdem haben die einzelnen Komponenten besonderes Verhalten. Sie können zum Beispiel gestartet und beendet werden oder angehalten werden, wenn der Speicher voll ist und fortgesetzt, wenn wieder Speicher frei ist. Somit entsteht ein komplizierter Lebenszyklus, mit dem die Taint Analyse umgehen muss. Außerdem muss vor der Analyse spezifiziert werden, was Sources und Sinks in Android sind.
 
 \section{FlowDroid}
-Diesen Problemen haben sich die Entwickler von FlowDroid gestellt und haben eine statische Taint Analyse die, Fluss-, Kontext-, Objekt- und Feld-Sensitiv ist implementiert \footnote{\url{https://github.com/secure-software-engineering/soot-infoflow-android/wiki}}.
-Für die Sinks und Sources benutzt FlowDroid die Ausgabe des Tools SuSi. SuSi ist ein machine-learning Tool, dass vollautomatisch den Android Source Code analysiert und eine Liste von Sinks und Sources ausgibt. Außerdem wird ein präziser Android Lebenszyklus modelliert.
+FlowDroid ist eine statische Taint Analyse die, Fluss-, Kontext-, Objekt- und Feld-Sensitiv ist \footnote{\url{https://github.com/secure-software-engineering/soot-infoflow-android/wiki}}.
+Für die Sinks und Sources benutzt FlowDroid die Ausgabe des Tools SuSi. SuSi ist ein machine-learning Tool, dass vollautomatisch den Android Source Code analysiert und eine Liste von Sinks und Sources generiert. Außerdem wird vor der Analyse ein präziser Android Lebenszyklus modelliert.
 \subsection{Lebenszyklus}
 Aufgrund der vielen möglichen Einstiegspunkte bei einer Android App, wird bei FlowDroid zunächst eine dummy-main-Mehtode erstellt. Diese Methode wird individuell für jede App erstellt. Die dummy-main enthält nur Teile des Lebenszyklus die auch auftreten können. Um diese zu indentifizieren werden die XML Konfigurationsdateien und der Quellcode analysiert. Danach ruft die dummy-main-Methode nachheinander Teile des Zykluses auf.
 \subsection{Evaluation}
-Für die Evaluerung wurde die Testumgebung DroidBench \footnote{\url{https://github.com/secure-software-engineering/DroidBench}} verwenden. DroidBench enthielt zum damaliegen Zeitpunkt 39 Apps mit verschiedenen Analyse Problemen. Vergliechen wurde FlowDroid mit den beiden komerziellen Tool App Scan von IBM und Fortify SCA von HP. 
-In dem Evaluierungsbogen (\ref{fig:eval}) ist zu erkennen, dass FlowDroid in den Kategorien Callbacks und Lifecycle deutlich besser ist, als die beiden kommerziellen Tools. Dies ist auf die präzise Modelierung des Lebenszyklus zurückzuführen. In ein paar Tests schlägt FlowDroid aber auch fehl. Zum Beispiel findet FlowDroid keinen Fehler im IntentSink1 Test. Das liegt daran, dass in dem Test tainted Daten aus der einen Komponente in die nächste übergeben wird und diese die Daten direkt wieder zurück schickt. FlowDroid verfolgt tainted Daten nur innerhalb der Komponenten. Deshalb schlägt der Test hier fehl. Ein weiterer Test der Fehlschlägt ist der StaticInitialization1 Test. Hier liegt der Grund in dem verwendeten Framework Soot. Soot ist ein Framework zum analysieren und transformieren von Java und Android Programmen. Es kann aus Java Code einen Call-Graphen generieren. Dabei geht Soot davon aus, dass die komplette statische Initialisierung zu beginn stattfindet, was in diesem Testfall nicht der Fall ist.
-Im Ergebniss schneidet FlowDroid jedoch besser ab, als seine beiden Konkurenten. FlowDroid ist mit 86\% etwas besser beim Verhältnis zwischen gefunden Fehlern und false-positives (Precision p). Mit 93\% gegenüber 50\% und 61\% ist FlowDroid aber deutlich besser beim auffinden aller Fehler (Recall r).
-FlowDroid testete zusätzlich die damals Top 500 Apps des Google Play Stores und fand in den meisten Apps ein Datenleck. Es waren jedoch keine bösen Absichten erkennbar. Außerdem wurden 1000 Malware Apps des VirusShare Projects analysiert. Es wurden pro App ca. zwei Datenlecks gefunden.
+Für die Evaluerung wurde die Testumgebung DroidBench \footnote{\url{https://github.com/secure-software-engineering/DroidBench}} verwenden. DroidBench enthielt zum damaliegen Zeitpunkt 39 Apps mit verschiedenen Analyse Problemen. Vergliechen wurde FlowDroid mit den beiden komerziellen Analyse Tools \emph{App Scan} von IBM und \emph{Fortify SCA} von HP. 
+In dem Evaluierungsbogen (\ref{fig:eval}) ist zu erkennen, dass FlowDroid in den Kategorien \emph{Callbacks} und \emph{Lifecycle} deutlich besser ist, als die beiden anderen Tools. Dies ist auf die präzise Modelierung des Lebenszyklus zurückzuführen. In ein paar Tests schlägt FlowDroid aber auch fehl. Zum Beispiel findet FlowDroid keinen Fehler im \emph{IntentSink1} Test. Das liegt daran, dass in dem Test tainted Daten aus einer Komponente in die nächste übergeben werden und diese die Daten direkt wieder zurück schickt. FlowDroid verfolgt tainted Daten nur innerhalb von Komponenten. Deshalb schlägt der Test hier fehl. Ein weiterer Test der Fehlschlägt ist der \emph{StaticInitialization1} Test. Hier liegt der Grund in dem verwendeten Framework Soot. 
+\\Soot ist ein Framework zum analysieren und transformieren von Java und Android Programmen. Es kann aus Java Code einen Call-Graphen generieren. Dabei geht Soot davon aus, dass die komplette statische Initialisierung zu beginn stattfindet, was in diesem Testfall nicht der Fall ist.
+\\Im Ergebniss schneidet FlowDroid jedoch besser ab, als seine beiden Konkurenten. FlowDroid ist mit 86\% etwas besser beim Verhältnis zwischen gefunden Fehlern und false-positives (Precision p). Mit 93\% gegenüber 50\% und 61\% ist FlowDroid aber deutlich besser beim auffinden aller Fehler (Recall r).
+\\Mit FlowDroid wurden zusätzlich die damals Top 500 Apps des Google Play Stores getestet. Dabei wurden in den meisten Apps ein Datenleck gefunden. 
+\\Außerdem wurden 1000 Malware Apps des VirusShare Projects analysiert. Es wurden pro App ca. zwei Datenlecks gefunden.
 
 \begin{figure}[htp]
 \centering 
@@ -166,16 +181,17 @@ FlowDroid testete zusätzlich die damals Top 500 Apps des Google Play Stores und
 \caption{DroidBench Evaluierung, aus \cite{technical}}
 \label{fig:eval}
 \end{figure} 
-
-\section{Ausblick}
-FlowDroid macht schon viele richtig, aber wie die Evaluierung gezeigt hat, ist FlowDroid noch nicht perfekt. Zum Einen sollte die Inter-App-Kommunikation verbessert werden, damit auch tainted Daten zwischen den Komponenten verfolgt werden können. Dazu könnte der Sink der einen Komponente gleichzeitig die Source der anderen Komponenten sein.
+ 
+\section{Ausblick} 
+FlowDroid macht viele richtig, aber wie die Evaluierung gezeigt hat, ist FlowDroid noch nicht perfekt. 
+\\Zum Einen sollte die Inter-App-Kommunikation verbessert werden, damit auch tainted Daten zwischen den Komponenten verfolgt werden können. Dazu könnte der Sink der einen Komponente gleichzeitig die Source der anderen Komponenten sein.
 Zum Anderen hat FlowDroid keine Sanitization implementiert. Dies ist jedoch notwendig, damit der Programmierer auf gefundene Fehler reagieren kann. 
-Für die Zukunft wäre es auch wichtig, dass FlowDroid unterscheiden kann zwischen notwendigen Datenlecks und bösartigen. Eine Navigationsapp benötigt den Benutzerstandort. Eine Taschenlampen App nicht.
-Schließlich wäre es auch hilfreich, wenn die Analyse für bestimmte Arten von Sinks und Sources einschränkbar wäre. Der Vorteil wäre, dass man sich bestimmte Datenflüsse näher anschauen könnte. SuSi klassifiziert und kategoriesiert bereits die Sinks und Sources.
+Für die Zukunft wäre es auch wichtig, dass FlowDroid unterscheiden kann zwischen notwendigen und bösartigen Datenlecks. Eine Navigationsapp benötigt den Benutzerstandort. Eine Taschenlampen App jedoch nicht.
+\\Schließlich wäre es auch hilfreich, wenn die Analyse für bestimmte Arten von Sinks und Sources einschränkbar wäre. Der Vorteil hierbei wäre, dass man sich bestimmte Datenflüsse näher anschauen könnte. SuSi klassifiziert und kategoriesiert bereits die Sinks und Sources.
 % Normaler LNCS Zitierstil
 %\bibliographystyle{splncs}
-
+ 
 \nocite{*}
-\bibliographystyle{ieeetr}
+\bibliographystyle{plain}
 \bibliography{literatur}
 \end{document}
