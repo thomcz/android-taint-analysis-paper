@@ -17,8 +17,8 @@ sensitive and Lifecycle-aware Taint Analysis for Android Apps",
 }
 
 @article {technical,
-	author	= "Christian Fritz and Steven Arzt and Siegfried Rasthofer and Eric Bodden and Alexandre Bartel and Jacques Klein and Yves
-le Traon and Damien Octeau and Patrick McDaniel",
+	author	= "Christian Fritz, Steven Arzt, Siegfried Rasthofer, Eric Bodden, Alexandre Bartel, Jacques Klein, Yves
+le Traon, Damien Octeau and Patrick McDaniel",
 	title	= "Highly Precise Taint Analysis for Android
 Applications",
 	year 	= "2013",
@@ -27,7 +27,7 @@ Applications",
 }
 
 @article {apposcopy,
-	author	= "Yu Feng and Saswat Anand and Alex Aiken and Isil Dillig",
+	author	= "Yu Feng, Saswat Anand, Alex Aiken, Isil Dillig",
 	title 	= "Apposcopy: Semantics-Based Detection of Android
 Malware through Static Analysis",
 	journal	= "FSE 2014 Proceedings of the 22nd ACM SIGSOFT International
@@ -36,7 +36,8 @@ Symposium on Foundations of Software Engineering",
 }
 
 @article {sanitization,
-	author 	= "Davide Balzarotti and Marco Cova and Vika Felmetsger and Nenad Jovanovic and Engin Kirda and Christopher Kruegel and Giovanni Vigna",
+	author 	= "Davide Balzarotti, Marco Cova, Vika Felmetsger, Nenad Jovanovic, Engin Kirda, Christopher Kruegel,
+Giovanni Vigna",
 	title 	= "Saner: Composing Static and Dynamic Analysis to Validate Sanitization in Web
 Applications",
 	journal	= "2008 IEEE Symposium on Security and Privacy",

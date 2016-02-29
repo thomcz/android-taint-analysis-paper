@@ -4,7 +4,7 @@
 \usepackage[utf8]{inputenc}
 %\usepackage[T1]{fontenc}
 \usepackage{graphicx}
-\usepackage{url}
+%\usepackage{url}
 \usepackage{llncsdoc}
 %----- Mathematischer Zeichenvorrat---%
 %\usepackage{amsmath}
@@ -13,9 +13,9 @@
 \usepackage{proof}
 \usepackage{mathpartir}
 % fuer die aktuelle Zeit 
-\usepackage{scrtime}
-\usepackage{listings}
-\usepackage{subfigure}
+%\usepackage{scrtime}
+%\usepackage{listings}
+%\usepackage{subfigure}
 \usepackage{hyperref}
 
 %referenzieren von Abbildungen
@@ -48,6 +48,7 @@
   tabsize=3
 }
 
+\usepackage{graphicx}
 \begin{document}
 
 \mainmatter
@@ -103,42 +104,78 @@ Eine gute Analyse sollte in der Lage sein false positives nicht zu melden. Dadur
 \subsubsection{Fluss-Sensitivität}
 In Abbildung \ref{fig:fluss_code} wird einem String s in Zeile 2 zunächst ein harmloser Wert zugewiesen. Im Anschluss wird dieser String einem Sink übergeben. Obwohl die tainted Daten, die dem String s in Zeile 4 zugewiesen werden nie in den sink kommen, wird dieser als tainted markiert. Grund dafür ist, dass die Reihenfolge nicht beachtet wird. Beachtet man diese findet die Analyse den false positive nicht. Diese Eigenschaft nennt man Fluss-Sensitivität.
 
+
+
 \subsubsection{Kontext-Sensitivität}
 Obwohl s2 in Abbildung \ref{fig:context_code} keine tainted Daten zugewiesen bekommt, wird der sink in Zeile 4 als tainted markiert. Grund dafür ist die Funktion \emph{id(s : String) : String} aus Zeile 7. Da s1 und s2 die Funktion \emph{id} aufrufen, zeigt das \emph{s} aus Zeile 8 sowohl auf s1 als auf s2. Da id mit den tainted Daten aus dem Source aufgerufen wird, werden s1 und s2 als tainted markiert. Durch Beachtung des Aufrufkontexts, zeigt das s aus Zeile 8 entweder auf s1 oder auf s2. Somit wird bei dieser herangehensweise kein Fehler gefunden.
+
 
 \subsubsection{Objekt-Sensitivität}
 Ein ähnliches Problem wie zuvor ist in Abbildung \ref{fig:object_code} zu sehen. Die Funktion \emph{getValue() : String} der Klasse Foo zeigt sowohl auf o1 als auf o2. Obwohl der Sink in Zeile 7 keine tainted Daten erhält wird hier ein Fehler angezeigt, da nicht zwischen den einzelnen Objekten unterschieden werden kann. Eine Analyse die Objekt-Sensitiv ist findet solche flase positives nicht. Die Objekt-Sensitivität kann auch als Subtyp der Kontext-Sensitivität gesehen werden.
 
+
 \subsubsection{Feld-Sensitivität}
 In der letzten Abbildung (\ref{fig:field_code}) ist ein Objekt o, dass mehrere Felder hat. Einem der Felder werden tainted Daten aus einer Source zugewiesen. Dem anderen Feld werden harmlose Daten zugewiesen. Obwohl das harmlose Feld dem Sink übergeben wird, wird der Sink als tainted markiert. Der Grund ist, dass Felder bei Feld-Insensitiven Analysen zu ihrem Basis Objekt zusammengeführt werden und als ganzes betrachtet werden. Da hier field2 tainted ist, wird das ganze Objekt o tainted und somit auch das field1. Bei einer Feld-Sensitiven Analyse werden die Felder einzeln betrachtet und ein Fehler wird hier nicht gefunden.
-
-\begin{figure}
+ \begin{figure}
 \lstinputlisting[language=Java]{code/flow_sensitive_example.java}
 \caption{Fluss-Sensitivität}
 \label{fig:fluss_code}
 \end{figure}
-
 \begin{figure}
 \lstinputlisting[language=Java]{code/context_sensitive_example.java}
 \caption{Kontext-Sensitivität}
 \label{fig:context_code}
 \end{figure}
-
 \begin{figure}
 \lstinputlisting[language=Java]{code/object_sensitive_example.java}
 \caption{Objekt-Sensitivität}
-\label{fig:object_code}
+\label{fig:object_code} 
 \end{figure}
- 
 \begin{figure}
 \lstinputlisting[language=Java]{code/field_sensitive_example.java}
 \caption{Feld-Sensitivität}
 \label{fig:field_code}
 \end{figure}
+\\\\
+\section{Android}
+%\subsection{Grundlagen}
+Android ist sowohl ein Betriebssystem als auch eine Software-Platform für mobile Geräte. Es bietet den Entwicklern eine Schnittstelle an, um auf verschiedene System Funktionalitäten des mobilen Gerätes zuzugreifen. Der Nutzerstandort ist zum Beispiel eine solche Funktionalität. Der Entwickler muss die von ihm genutzte Funktionalität in die \emph{AndroidManifest.xml} eintragen. Der Benutzer, der die App installieren möchte muss dieser die Berechtigung geben diese Funktionalitäten verwenden zu dürfen. Werden die Berechtigungen verweigert, kann die App nicht installiert werden. Das Problem ist, dass oft zu viele Berechtigungen gefordert werden. Entweder aus Unkenntnis oder mit bösen Absichten. Außerdem sind viele Berechtigungen zu mächtig und können ausgenutzt werden. Eine social-network App zum Beispiel, möchte die Berechtigung\\\emph{android.permission.READ\_CONTACTS} um neue Freunde anhand der Email Adresse vorschlagen zu können. Sie kann aber mit dieser Berechtigung auch die Telefonnummern und sonstige Kontaktdaten auslesen, auch wenn der Kontakt nicht bei dem Dienst angemeldet ist. Trojaner können dies ausnutzen. Um dem entgegenzuwirken kann man die Datenflüsse einer Android App mithilfe der Taint Analyse analysieren. Dabei gibt es einige Besonderheiten und Schwierigkeiten gegenüber anderen \emph{JAVA} Programmen. Eine Android App kann aus vier verschiedenen Komponenten bestehen.\\\\
+\begin{tabular}{ll}
+	Activity & Einzelner Screen, der für den Benutzer sichtbar ist\\
+	Service & Eine Aktion die im Hintergrund abläuft\\
+	Content Provider & Ist zuständig für das Speichern von Daten\\
+	Broadcast Reciever & Wartet auf ein globales Ereignis und führt eine vodefinierte \\
+	& Aktion durch\\\\
+\end{tabular}
+Aufgrund dieser Besonderheit entstehen bestimmte Probleme für eine Taint Analyse. Zum einen hat eine Android App keine zentrale main Methode sondern mehrere Einstiegspunkte. Eine App kann zum Beispiel aus drei Activities und einem Service bestehen. Es gibt zwar eine Haupt-Activity, aber welche Komponente als nächstes an die Reihe kommt ist unbestimmt, da es meißt auf die Benutzereingabe ankommt. Außerdem haben die einzelnen Komponenten besonderes Verhalten. Sie können zum Beispiel gestartet und beendet werden oder angehalten werden, wenn der Speicher voll ist und fortgesetzt, wenn wieder Speicher frei ist. Somit entsteht ein komplizierter Lebenszyklus, mit dem die Taint Analyse umgehen muss. Außerdem muss vor der Analyse spezifiziert werden, was sinks und sources in Android sind.
 
+\section{FlowDroid}
+Diesen Problemen haben sich die Entwickler von FlowDroid gestellt und haben eine statische Taint Analyse die, Fluss-, Kontext-, Objekt- und Feld-Sensitiv ist implementiert \footnote{\url{https://github.com/secure-software-engineering/soot-infoflow-android/wiki}}.
+Für die Sinks und Sources benutzt FlowDroid die Ausgabe des Tools SuSi. SuSi ist ein machine-learning Tool, dass vollautomatisch den Android Source Code analysiert und eine Liste von Sinks und Sources ausgibt. Außerdem wird ein präziser Android Lebenszyklus modelliert.
+\subsection{Lebenszyklus}
+Aufgrund der vielen möglichen Einstiegspunkte bei einer Android App, wird bei FlowDroid zunächst eine dummy-main-Mehtode erstellt. Diese Methode wird individuell für jede App erstellt. Die dummy-main enthält nur Teile des Lebenszyklus die auch auftreten können. Um diese zu indentifizieren werden die XML Konfigurationsdateien und der Quellcode analysiert. Danach ruft die dummy-main-Methode nachheinander Teile des Zykluses auf.
+\subsection{Evaluation}
+Für die Evaluerung wurde die Testumgebung DroidBench \footnote{\url{https://github.com/secure-software-engineering/DroidBench}} verwenden. DroidBench enthielt zum damaliegen Zeitpunkt 39 Apps mit verschiedenen Analyse Problemen. Vergliechen wurde FlowDroid mit den beiden komerziellen Tool App Scan von IBM und Fortify SCA von HP. 
+In dem Evaluierungsbogen (\ref{fig:eval}) ist zu erkennen, dass FlowDroid in den Kategorien Callbacks und Lifecycle deutlich besser ist, als die beiden kommerziellen Tools. Dies ist auf die präzise Modelierung des Lebenszyklus zurückzuführen. In ein paar Tests schlägt FlowDroid aber auch fehl. Zum Beispiel findet FlowDroid keinen Fehler im IntentSink1 Test. Das liegt daran, dass in dem Test tainted Daten aus der einen Komponente in die nächste übergeben wird und diese die Daten direkt wieder zurück schickt. FlowDroid verfolgt tainted Daten nur innerhalb der Komponenten. Deshalb schlägt der Test hier fehl. Ein weiterer Test der Fehlschlägt ist der StaticInitialization1 Test. Hier liegt der Grund in dem verwendeten Framework Soot. Soot ist ein Framework zum analysieren und transformieren von Java und Android Programmen. Es kann aus Java Code einen Call-Graphen generieren. Dabei geht Soot davon aus, dass die komplette statische Initialisierung zu beginn stattfindet, was in diesem Testfall nicht der Fall ist.
+Im Ergebniss schneidet FlowDroid jedoch besser ab, als seine beiden Konkurenten. FlowDroid ist mit 86\% etwas besser beim Verhältnis zwischen gefunden Fehlern und false-positives (Precision p). Mit 93\% gegenüber 50\% und 61\% ist FlowDroid aber deutlich besser beim auffinden aller Fehler (Recall r).
+FlowDroid testete zusätzlich die damals Top 500 Apps des Google Play Stores und fand in den meisten Apps ein Datenleck. Es waren jedoch keine bösen Absichten erkennbar. Außerdem wurden 1000 Malware Apps des VirusShare Projects analysiert. Es wurden pro App ca. zwei Datenlecks gefunden.
+
+\begin{figure}[htp]
+\centering 
+\includegraphics[scale=1]{img/evaluation.png}
+\caption{DroidBench Evaluierung, aus \cite{technical}}
+\label{fig:eval}
+\end{figure} 
+
+\section{Ausblick}
+FlowDroid macht schon viele richtig, aber wie die Evaluierung gezeigt hat, ist FlowDroid noch nicht perfekt. Zum Einen sollte die Inter-App-Kommunikation verbessert werden, damit auch tainted Daten zwischen den Komponenten verfolgt werden können. Dazu könnte der Sink der einen Komponente gleichzeitig die Source der anderen Komponenten sein.
+Zum Anderen hat FlowDroid keine Sanitization implementiert. Dies ist jedoch notwendig, damit der Programmierer auf gefundene Fehler reagieren kann. 
+Für die Zukunft wäre es auch wichtig, dass FlowDroid unterscheiden kann zwischen notwendigen Datenlecks und bösartigen. Eine Navigationsapp benötigt den Benutzerstandort. Eine Taschenlampen App nicht.
+Schließlich wäre es auch hilfreich, wenn die Analyse für bestimmte Arten von Sinks und Sources einschränkbar wäre. Der Vorteil wäre, dass man sich bestimmte Datenflüsse näher anschauen könnte. SuSi klassifiziert und kategoriesiert bereits die Sinks und Sources.
 % Normaler LNCS Zitierstil
 %\bibliographystyle{splncs}
-\bibliographystyle{itmalpha}
-\bibliography{literatur}
 
+\nocite{*}
+\bibliographystyle{ieeetr}
+\bibliography{literatur}
 \end{document}
