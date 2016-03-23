@@ -1,5 +1,5 @@
 void flowSensitive() {
-	String s = "value";
-	sink(s);
-	s = source();
+	String s = "value";@\label{flow:s}@
+	sink(s);@\label{flow:sink}@
+	s = source();@\label{flow:source}@
 }

@@ -1,9 +1,9 @@
 void fieldSensitive() {
 	Foo o = new Foo();
-	o.field1 = “123“;
-	o.field2 = source();
+	o.field1 = "123";@\label{field:f1}@
+	o.field2 = source();@\label{field:f2}@
 	
-	sink(o.field1);
+	sink(o.field1);@\label{field:sink}@
 }
 
 class Foo {
