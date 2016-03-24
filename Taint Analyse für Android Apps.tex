@@ -86,12 +86,31 @@ Im folgenden wird zunächst auf die Grundlagen der Taint Analyse eingegangen um 
 Die Taint Analyse ist eine Datenflussanalyse. Man unterscheidet zwischen statischer und dynamischer Taint Analyse. Bei einer statische Analyse wird der Quelltext einer Reihe formaler Prüfungen unterzogen. Der Vorteil dabei ist, dass das Kompilat nicht ausgeführt werden muss um gegensatz zur dynamischen Analyse, die ein laufendes Programm voraussetzt. Dies ist hilfreich, da heutige Malware erkennen kann ob sie überwacht wird und ihr Verhalten der Situation anpasst. \\
 Im folgenden wird sich auf die statische Taint Analyse beschränkt.\\
 Die Taint Analyse nimmt zunächst an, dass jede von außen veränderbare Variable ein Sicherheitsrisiko birgt. Ihr Ziel ist es, die Software gegen externe Angriffe, sowie interne Risiken abzusichern. Dazu sucht die Taint Analyse nach Datenflüssen von möglichen tainted Sources zu einem Sink. Als Source wird eine Funktion bezeichnet, die Quelle sensitiver Daten ist. Ein Sink ist eine Funktion, die Daten möglicherweiese an nicht vertrauenswürdige Beobachter weitergibt. Welche Funktionen im einzelnen Sources und Sinks sind, muss vor dem ausführen der Taint Analyse spezifiziert werden. In dem Beispiel aus Abbildug \ref{fig:sql_code} wäre die Funktion \emph{readLine()} eine Source, da Daten von außen eingeführt werden (Benutzereingabe) und die Funktion \emph{executeQuery(sql : String)} ein Sink, da hier möglicherweise sensitive Daten weitergegeben werden.
-\subsection{Formal}
-Im Folgendem wird die Taint Analyse mithilfe von Schlussregeln formalisiert(\ref{fig:schlussregeln}). Die SOURCE Regel beschreibt die Einfuhr von tainted Daten durch einen Source. \emph{src(m,l)} bedeutet, dass dem Parameter \emph{m} Daten aus einer Source zugewiesen werden mit dem Namen \emph{l}. \emph{l} ist der Name einer Source, die aus einem Source-Label-Set stammt. Wenn \emph{m} auf einen Objektrepräsentanten \emph{o} zeigt, ist \emph{o} durch die Source \emph{l} tainted. \\Als Objektrepräsentant wird ein Objekt im Sinne der Analyse bezeichnet. Da nicht sicher ist auf wieviele Objekte tatsächlich zur Laufzeit ein Zeiger zeigt, fasst man diese Menge zusammen und wählt einen Objekträpresentanten. 
-\\Die zweite Regel TRANSFER beschreibt die Übertragung von tainted Daten. \emph{transfer(m,n)} bedeutet, dass Daten vom Parameter \emph{m} zu \emph{n} übertragen werden. Wenn außerdem der Objektrepräsentant \emph{o1} von einer Source \emph{l} tainted ist und \emph{m} auf \emph{o1} und \emph{n} auf ein \emph{o2} zeigt, dann ist auch \emph{o2} durch \emph{l} tainted.
-\\Die letzte Regel SOURCE beschreibt den Datenfluss von verschmutzen Daten zu einem Sink. Wenn der  Objektrepräsentant \emph{o} durch eine Source \emph{so} tainted ist und die Variable \emph{m}, die auf \emph{o} zeigt einem Sink mit dem Namen \emph{si} übergeben wird, dann gibt es einen Datenfluss von der Source \emph{so} zum Sink \emph{si}. \emph{si} ist dabei der Name eines Sinks aus einem Sink-Label-Set. 
-\\Mit diesen drei Regeln kann man eine Taint Analyse durchführen indem man diese solange immer wieder ausführt, bis sich am Ergebniss nichts mehr ändert.
-\begin{figure}
+\section{Formal}
+Im Folgendem wird die Taint Analyse mithilfe von Schlussregeln in Abbildung \ref{fig:schlussregeln} formalisiert. Eine Schlussregel besteht aus einer Menge von Prämissen, die über dem Schlussstrich stehen und einer Konklusion die darunter steht. Wenn die Prämissen alle wahr sind ist die Konklusion auch wahr. \\
+Die Regeln setzten sich aus den folgenden Prämissen zusammen:\\\\
+\begin{tabular}{ll}
+	\textbf{Prämisse}			& \textbf{Bedeutung}\\
+	\emph{src(m,so)}			& Dem Parameter m werden tainted Daten aus einer Source mit \\ 
+								& dem Namen so zugewiesen\\
+	\emph{sink(m,si)} 			& Der Parameter m wird in einen Sink mit dem Namen si \\
+								& übergeben\\
+	\emph{tainted(o,so)} 		& Der Objektrepräsentant o wird durch eine Source mit dem \\
+								& Namen so tainted\\
+	\emph{flow(so,si)} 			& Es gibt einen Datenfluss von einer Source mit dem Namen so zu\\
+								& einem Sink mit Namen si\\
+	\emph{transfer(m,n)} 		& Es werden Daten von Parameter m zu Parameter n übertragen\\
+	\emph{m $\rightarrow$ o} 	& Die Variable m zeigt auf einen Objektrepräsentanten o
+\end{tabular}\\\\\\
+Die Namen der Sources und Sinks stammen jeweils aus einem Source-Label-Set, bzw. einem Sink-Label-Set. Diese Sets enthalten alle Sources und Sinks die für die jeweilige Taint Analyse benötigt werden. Als Objektrepräsentant wird ein Objekt im Sinne der Analyse bezeichnet.\\
+Die erste Regel ist die SOURCE Regel. Sie beschreibt die Zuweisung von tainted Daten durch einen Source. Die SOURCE Regel setzt sich aus den Prämissen \emph{src(m,l)} und \emph{m $\rightarrow$ o}. Wenn diese beiden Prämissen wahr sind folgt die Konklusion \emph{tainted(o,l)}. \\
+Möchte man diese erste Regel auf das Beispiel aus Abbildung \ref{fig:sql_code} anwenden muss man zunächst die Sources und Sinks definieren und diese in das jeweilige Set eintragen. In das Source-Label-Set wird die Funktion \emph{readline()} aus Zeile \ref{sql:name} eingetragen, da hier durch die Benutzereingabe potentiell gefährliche Daten reinkommen können. In das Sink-Label-Set wird die Funktion \emph{executeQuery(s : String)} eingetragen, da hier möglicherweise tainted Daten weitergegeben werden können. Die SOURCE Regel wird in Zeile \ref{sql:name} den String \emph{name} als tainted durch die Source \emph{readLine()} markieren, da die beiden Prämissen wahr sind.\\
+Die zweite Regel TRANSFER beschreibt die Übertragung von tainted Daten. Sie besteht aus den Prämissen \emph{tainted($o_1$,l)}, \emph{m $\rightarrow$ $o_1$} ,\emph{n $\rightarrow$ $o_2$}. Wenn alle Prämissen wahr sind, dann folgt die Konklusion \emph{tainted($o_2$,l)}.\\
+Die TRANSFER Regel wir in dem Beispiel aus Abbildung \ref{fig:sql_code} in Zeile \ref{sql:sql} angewendet, da hier Daten vom String \emph{name} zum String \emph{sql} übertragen werden. Da auch hier alle Prämissen der TRANSFER Regel erfüllt sind, wird der String \emph{sql} auch als tainted markiert. \\
+Die letzte Regel SOURCE beschreibt den Datenfluss von tainted Daten zu einem Sink. Sie besteht aus den Prämissen \emph{tainted(o,so)}, \emph{m $\rightarrow$ o} und \emph{sink(m,si)}. Sind alle Prämissen wahr, dann folgt die Konklusion \emph{flow(so,si)} und der Sink \emph{si} wird als tainted markiert. 
+Die SOURCE Regel wird in dem Beispiel aus Abbildung \ref{fig:sql_code} in Zeile \ref{sql:sink} angewendet, da hier der String \emph{sql} dem Sink \emph{executeQuery} übergeben wird. Auch hier sind alle Prämissen der SOURCE Regel erfüllt und somit folgt die Konklusion und der Sink \emph{executeQuery} wird als tainted maarkiert.\\
+Mit diesen drei Regeln und Fixpunktiteration kann man eine Taint Analyse durchführen.
+\begin{figure}[t]
 \begin{mathpar}
 \infer[(SOURCE)] {tainted(o, l)}{src(m,l)\\ m \rightarrow o}\\\\
 \infer[(TRANSFER)] {tainted(o_2, l)}{tainted(o_1,l)\\ m \rightarrow o_1 \\ n \rightarrow o_2 \\ transfer(m,n)}\\\\
@@ -101,11 +120,7 @@ Im Folgendem wird die Taint Analyse mithilfe von Schlussregeln formalisiert(\ref
 \label{fig:schlussregeln}
 \end{figure}
 
-\subsubsection{Beispiel}
-Im folgenden wird dargestellt wie die Anwendung der Regeln auf das Beispiel aus Abbildung \ref{fig:sql_code} aussieht. 
-\\Zunächst müssen die Sources und Sinks definiert werden. Dazu wird die Funktion \emph{readLine} aus Zeile vier in das Source-Label-Set eingefügt. In das Sink-Label-Set wird die Funktion \emph{executeQuery} aus Zeile sechs eingefügt. Die Taint Analyse wird zunächst die SOURCE Regel in Zeile vier anwenden, da dort Daten aus einer Source dem String \emph{name} zugewiesen werden. Somit wird der String \emph{name} als tainted markiert. Als nächstes wird die TRANSFER Regel in Zeile fünf angewendet. Hier werden Daten vom String "name" zum String \emph{sql} übertragen. Deshalb wird auch hier der String \emph{sql} als tainted markiert. Schließlich wird in Zeile sechs die SINK Regel angewendet. Hier wird der String \emph{sql} in den Sink \emph{executeQuery} übergeben. Da \emph{sql} tainted ist, wird der Sink \emph{executeQuery} auch als tainted markiert. Somit wurde ein tainted Datenfluss von der Source \emph{readLine} zum Sink \emph{executeQuery} gefunden.
-
-\subsection{Sanitization}
+\section{Sanitization}
 Mithilfe von Sanitization Funktionen lassen sich Code Injections verhindern. Als Code Injection bezeichnet man das ausnutzen eines Programmfehlers indem man Code in das Program einschleust.
 \\In Abbildung \ref{fig:sql_code} würde zum Beispiel die Funktion \emph{onlyLetters(s : String) : String} die Benutzereingabe als Parameter entgegen nehmen, alle nicht Buchstaben aus der Eingabe entfernen und einen String zurückgeben, der nur aus Buchstaben besteht. Einige Programmiersprachen bieten solche Säuberungsfunktionen an. PHP hat zum Beispiel die Funktion \emph{htmlentities}. Diese Funktion konvertiert Zeichen, die in HTML besondere Bedeutung haben in ihre HTML Instanzen. Aus dem Zeichen '\textless' wird "\&lt;".\\
 Eine Taint Analyse die Sanitization unterstützt, hat den Vorteil, dass gesäuberte Werte nicht länger als tainted angesehen werden und nicht mehr als tainted verbreitet werden.
@@ -155,24 +170,30 @@ In Abbildung \ref{fig:field_code} wird in Zeile \ref{field:o} zunächst ein Foo 
 \end{figure}
 
 \section{Android}\label{sec:android}
-%\subsection{Grundlagen}
-Android ist sowohl ein Betriebssystem als auch eine Software-Platform für mobile Geräte. Es bietet Entwicklern eine Schnittstelle an, um auf verschiedene Systemfunktionalitäten des mobilen Gerätes zuzugreifen. Der Nutzerstandort ist zum Beispiel eine solche Funktionalität. Der Entwickler muss die von ihm genutzte Funktionalität in die \emph{AndroidManifest.xml} eintragen. Der Benutzer, der die App installieren möchte muss dieser die Berechtigung geben auf diese Funktionalitäten zugreifen zu dürfen. Werden die Berechtigungen verweigert, kann die App nicht installiert werden. Das Problem ist, dass oft zu viele Berechtigungen gefordert werden. Entweder aus Unkenntnis oder mit bösen Absichten. Außerdem sind viele Berechtigungen zu mächtig und können ausgenutzt werden. Eine social-network App zum Beispiel, möchte die Berechtigung\\\emph{android.permission.READ\_CONTACTS} um neue Freunde anhand der Email Adresse vorschlagen zu können. Sie kann aber mit dieser Berechtigung auch Telefonnummern und sonstige Kontaktdaten auslesen, auch wenn der Kontakt nicht bei dem Dienst angemeldet ist. Trojaner können dies ausnutzen. 
-\\Um dem entgegenzuwirken kann man die Datenflüsse einer Android App mithilfe der Taint Analyse analysieren. Dabei gibt es einige Besonderheiten und 
-\\Schwierigkeiten gegenüber anderen \emph{JAVA} Programmen. Eine Android App kann nämlich aus vier verschiedenen Komponenten bestehen.\\\\
+Android ist sowohl ein Betriebssystem als auch eine Software-Platform für mobile Geräte. Es bietet Entwicklern eine Schnittstelle an, um auf verschiedene Systemfunktionalitäten des mobilen Gerätes zuzugreifen. Der Nutzerstandort ist zum Beispiel eine solche Funktionalität. Der Entwickler muss die von ihm genutzte Funktionalität in die \emph{AndroidManifest.xml} eintragen. Der Benutzer, der die App installieren möchte muss dieser die Berechtigung geben auf diese Funktionalitäten zugreifen zu dürfen. Oft werden zu viele Berechtigungen gefordert werden. Entweder aus Unkenntnis oder mit bösen Absichten. Außerdem sind viele Berechtigungen zu mächtig und können ausgenutzt werden. Eine social-network App zum Beispiel, möchte die Berechtigung\\\emph{android.permission.READ\_CONTACTS} um neue Freunde anhand der Email Adresse vorschlagen zu können. Sie kann aber mit dieser Berechtigung auch Telefonnummern und sonstige Kontaktdaten auslesen, auch wenn der Kontakt nicht bei dem Dienst angemeldet ist. Dies kann ausgenutzt werden.\\
+Um dem entgegenzuwirken kann man die Datenflüsse einer Android App mithilfe der Taint Analyse analysieren. \\
+Eine Android App kann aus vier Arten von Komponenten bestehen.\\\\
 \begin{tabular}{ll}
 	Activity & Einzelner Screen, der für den Benutzer sichtbar ist\\
 	Service & Eine Aktion die im Hintergrund abläuft\\
-	Content Provider & Ist zuständig für das Speichern von Daten\\
+	Content Provider & Ist zuständig für das Lesen und Speichern von Daten\\
 	Broadcast Reciever & Wartet auf ein globales Ereignis und führt eine vordefinierte \\
 	& Aktion aus\\\\
 \end{tabular}
-Aufgrund dieser Besonderheit entstehen bestimmte Probleme für eine Taint Analyse. Zum einen hat eine Android App keine zentrale \emph{main} Methode, sondern mehrere Einstiegspunkte. Eine App kann zum Beispiel aus drei Activities und einem Service bestehen. Es gibt zwar eine Haupt-Activity, aber welche Komponente als nächstes an die Reihe kommt ist im allgemeinen nicht bestimmbar, da es oft auf die Benutzereingabe ankommt. Außerdem haben die einzelnen Komponenten besonderes Verhalten. Sie können zum Beispiel gestartet und beendet werden oder angehalten werden, wenn der Speicher voll ist und fortgesetzt, wenn wieder Speicher frei ist. Somit entsteht ein komplizierter Lebenszyklus, mit dem die Taint Analyse umgehen muss. Außerdem muss vor der Analyse spezifiziert werden, was Sources und Sinks in Android sind.
+Da eine Android App aus einer beliebigen Zusammensätzung dieser Komponenten bestehen kann, zum Beispiel drei Activities und einem Service, entstehen Schwierigkeiten für eine Taint Analyse. Zunächst hat eine Android App keine zentrale \emph{main} Methode, sondern kann aufgrund der verschiedenen Komponenten mehrere Einstiegspunkte haben. Es gibt zwar eine Haupt-Activity, aber welche Komponente als nächstes an die Reihe kommt ist im allgemeinen nicht bestimmbar, da diese von der Benutzereingabe abhängig sind. Außerdem haben die einzelnen Komponenten besonderes Verhalten. Sie können zum Beispiel gestartet und beendet werden oder angehalten werden, wenn der Speicher voll ist und fortgesetzt, wenn wieder Speicher frei ist. Somit entsteht ein komplizierter Lebenszyklus, mit dem die Taint Analyse umgehen muss, da tainted Daten zwischen den Komponenten hin und hergereicht werden können in beliebiger Reihenfolge und mit verschiedenem Verhalten der einzelnen Komponenten. 
 
 \section{FlowDroid}\label{sec:flowdroid}
-FlowDroid ist eine statische Taint Analyse die, Fluss-, Kontext-, Objekt- und Feld-Sensitiv ist \footnote{\url{https://github.com/secure-software-engineering/soot-infoflow-android/wiki}}.
-Für die Sinks und Sources benutzt FlowDroid die Ausgabe des Tools SuSi. SuSi ist ein machine-learning Tool, dass vollautomatisch den Android Source Code analysiert und eine Liste von Sinks und Sources generiert. Außerdem wird vor der Analyse ein präziser Android Lebenszyklus modelliert.
-\subsection{Lebenszyklus}
-Aufgrund der vielen möglichen Einstiegspunkte bei einer Android App, wird bei FlowDroid zunächst eine dummy-main-Mehtode erstellt. Diese Methode wird individuell für jede App erstellt. Die dummy-main enthält nur Teile des Lebenszyklus die auch auftreten können. Um diese zu indentifizieren werden die XML Konfigurationsdateien und der Quellcode analysiert. Danach ruft die dummy-main-Methode nachheinander Teile des Zykluses auf.
+FlowDroid\footnote{\url{https://github.com/secure-software-engineering/soot-infoflow-android/wiki}} ist eine statische Taint Analyse. Sie ist Fluss-, Kontext-, Objekt- und Feld-Sensitiv. Zur Bestimmung der Sources und Sinks benutzt FlowDroid das Tool SuSi. SuSi ist ein machine-learning Tool, dass vollautomatisch den Android Source Code analysiert und eine Liste von Sinks und Sources generiert. Außerdem generiert FlowDroid vor der Taint Analyse einen präzisen Android Lebenszyklus.\\
+Aufgrund der vielen möglichen Einstiegspunkte bei einer Android App, wird bei FlowDroid zunächst eine dummy-main-Methode erstellt. Diese Methode wird individuell für jede App erstellt. Die dummy-main enthält nur Teile des Lebenszyklus die auch auftreten können. Um diese zu identifizieren werden die XML Konfigurationsdateien und der Quellcode analysiert. Danach ruft die dummy-main-Methode nachheinander Teile des Zykluses auf.
+
+\begin{figure}
+\lstinputlisting[language=Java]{code/lifecycle_example.java}
+\caption{Lebenszyklus Code Beispiel}
+\label{fig:cycle_code}
+\end{figure}
+
+
+
 \subsection{Evaluation}
 Für die Evaluerung wurde die Testumgebung DroidBench \footnote{\url{https://github.com/secure-software-engineering/DroidBench}} verwenden. DroidBench enthielt zum damaliegen Zeitpunkt 39 Apps mit verschiedenen Analyse Problemen. Vergliechen wurde FlowDroid mit den beiden komerziellen Analyse Tools \emph{App Scan} von IBM und \emph{Fortify SCA} von HP. 
 In dem Evaluierungsbogen (\ref{fig:eval}) ist zu erkennen, dass FlowDroid in den Kategorien \emph{Callbacks} und \emph{Lifecycle} deutlich besser ist, als die beiden anderen Tools. Dies ist auf die präzise Modelierung des Lebenszyklus zurückzuführen. In ein paar Tests schlägt FlowDroid aber auch fehl. Zum Beispiel findet FlowDroid keinen Fehler im \emph{IntentSink1} Test. Das liegt daran, dass in dem Test tainted Daten aus einer Komponente in die nächste übergeben werden und diese die Daten direkt wieder zurück schickt. FlowDroid verfolgt tainted Daten nur innerhalb von Komponenten. Deshalb schlägt der Test hier fehl. Ein weiterer Test der Fehlschlägt ist der \emph{StaticInitialization1} Test. Hier liegt der Grund in dem verwendeten Framework Soot. 
