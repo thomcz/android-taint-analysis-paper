@@ -4,7 +4,7 @@
 	author	= "Business Insider",
 	title 	= "Anzahl der verfügbaren Apps im Google Play Store von Dezember 2009 bis Februar 2015 (in 1.000)",
 	howpublished	= "Statista",
-	note	= "http://de.statista.com/statistik/daten/studie/74368/umfrage/anzahl-der-verfuegbaren-apps-im-google-play-store/"
+	note	= "\url{http://de.statista.com/statistik/daten/studie/74368/umfrage/anzahl-der-verfuegbaren-apps-im-google-play-store/}, [Online; Stand 24.03.2016]"
 }
 
 @masterthesis{master,
@@ -13,14 +13,14 @@
 	year	= "2013",
 	month	= "Juli",
 	school 	= "TU Darmstadt",
-	note 	= "https://ec-spride.sit.fraunhofer.de/fileadmin/user\_upload/Group\_EC\_Spride/FinishedTheses/\\Masterthesis20130702.pdf"
+	note 	= "\url{https://ec-spride.sit.fraunhofer.de/fileadmin/user\_upload/Group\_EC\_Spride/FinishedTheses/Masterthesis20130702.pdf}"
 }
 
 @article {fd_art,
 	author	= "Steven Arzt and Christian Fritz and Eric Bodden and Alexandre Bartel and Jacques Klein and Yvesle Traon and Damien Octeau and Patrick McDaniel and Siegfried Rasthofer",
 	title	= "FlowDroid: Precise Context, Flow, Field, Object-sensitive and Lifecycle-aware Taint Analysis for Android Apps",
 	journal = "PLDI 2014", 
-	note	= "http://www.bodden.de/pubs/far+14flowdroid.pdf"
+	note	= "\url{http://www.bodden.de/pubs/far+14flowdroid.pdf}"
 }
 
 @article {technical,
@@ -30,7 +30,7 @@ le Traon and Damien Octeau and Patrick McDaniel",
 	year 	= "2013",
 	month 	= "Mai",
 	journal	= "EC SPRIDE Technical Report TUD-CS-2013-0113",
-	note	= "https://www.informatik.tu-darmstadt.de/fileadmin/user\_upload/Group\_CASED/Publikationen/TUD-CS-2013-0113.pdf"
+	note	= "\url{https://www.informatik.tu-darmstadt.de/fileadmin/user\_upload/Group\_CASED/Publikationen/TUD-CS-2013-0113.pdf}"
 }
 
 @article {apposcopy,
@@ -51,6 +51,6 @@ le Traon and Damien Octeau and Patrick McDaniel",
 	author	= "Siegfried Rasthofer and Steven Arzt and Eric Bodden",
 	title 	= "A Machine-learning Approach for Classifying and Categorizing Android Sources and Sinks",
 	publisher	= "NDSS 2014",
-	note 	= "https://www.informatik.tu-darmstadt.de/fileadmin/user\_upload/Group\_EC-Spride/Publikationen/SuSi2014.pdf"
+	note 	= "\url{https://www.informatik.tu-darmstadt.de/fileadmin/user\_upload/Group\_EC-Spride/Publikationen/SuSi2014.pdf}"
 }
 
